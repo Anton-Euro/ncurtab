@@ -1,7 +1,6 @@
 #ifndef FILESYSTEM_H
 #define FILESYSTEM_H
 
-#include <stdio.h>
 #include <stdbool.h>
 
 #define MAX_FILES 256

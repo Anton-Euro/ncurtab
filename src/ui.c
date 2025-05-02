@@ -36,7 +36,7 @@ void draw_tabs(TabManager* tab_manager, int start_y, int width) {
         if (i == tab_manager->active_tab) {
             attron(COLOR_PAIR(2));
         }
-        mvprintw(start_y, i * 20, "Tab %d: %s", i + 1, tab_manager->tabs[i].left_path);
+        mvprintw(start_y, i * 10, "Tab %d", i + 1);
         if (i == tab_manager->active_tab) {
             attroff(COLOR_PAIR(2));
         }
@@ -50,16 +50,21 @@ void draw_ui(TabManager* tab_manager) {
 
     draw_tabs(tab_manager, 0, max_x);
 
-    int panel_width = max_x / 2;
-    int panel_height = max_y - 2;
-
     Tab* active_tab = &tab_manager->tabs[tab_manager->active_tab];
+    char* current_path = active_tab->active_panel ? active_tab->left_path : active_tab->right_path;
+    mvprintw(1, 0, "Path: %s", current_path);
+
+    int panel_width = max_x / 2;
+    int panel_height = max_y - 4;
+
+    mvprintw(1, 0, "%-*s", panel_width - 1, active_tab->left_path);
+    mvprintw(1, panel_width, "%-*s", panel_width - 1, active_tab->right_path);
+
     draw_panel(active_tab->left_list, active_tab->left_cursor, active_tab->left_offset, 
-               2, 0, panel_height, panel_width, active_tab->active_panel);
+               3, 0, panel_height, panel_width, active_tab->active_panel);
     draw_panel(active_tab->right_list, active_tab->right_cursor, active_tab->right_offset, 
-               2, panel_width, panel_height, panel_width, !active_tab->active_panel);
+               3, panel_width, panel_height, panel_width, !active_tab->active_panel);
 
-
-    mvprintw(max_y - 1, 0, "F1: Switch Panel | Tab: Switch Tab | t: New Tab | q: Quit");
+    mvprintw(max_y - 1, 0, "F1: Switch Panel | Tab: Switch Tab | t: New Tab | Del: Delete | F2: Rename | F5: Copy | F6: Move | q: Quit");
     refresh();
 }
