@@ -2,10 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "filesystem.h"
-#include "ui.h"
 #include "tabs.h"
+#include "ui.h"
 
-#define MAX_PATH 256
 
 int main() {
     initscr();
@@ -20,16 +19,23 @@ int main() {
     init_pair(3, COLOR_BLUE, COLOR_BLACK);
     init_pair(4, COLOR_WHITE, COLOR_BLACK);
 
+    UIWindows ui;
+    init_ui_windows(&ui);
+    
     TabManager* tab_manager = init_tabs();
-    add_tab(tab_manager, "/");
+    add_tab(tab_manager, getenv("HOME"));
 
     int ch;
     bool running = true;
     while (running) {
-        draw_ui(tab_manager);
+        draw_ui(&ui, tab_manager);
 
         ch = getch();
         switch (ch) {
+            case KEY_RESIZE:
+                resize_ui_windows(&ui);
+                draw_ui(&ui, tab_manager);
+                break;
             case 'q':
                 running = false;
                 break;
@@ -49,25 +55,28 @@ int main() {
                 enter_directory(tab_manager);
                 break;
             case KEY_F(1):
-                tab_manager->tabs[tab_manager->active_tab].active_panel = 
-                    !tab_manager->tabs[tab_manager->active_tab].active_panel;
+                tab_manager->tabs[tab_manager->active_tab].active_panel = !tab_manager->tabs[tab_manager->active_tab].active_panel;
                 break;
-            case KEY_DC: // Delete key
-                delete_file_or_dir(tab_manager);
+            case 'd':
+                delete_entity(tab_manager, &ui);
                 break;
-            case KEY_F(2): // F2 for rename
-                rename_file_or_dir_ui(tab_manager);
+            case 'r':
+                rename_entity(tab_manager, &ui);
                 break;
-            case KEY_F(5): // F5 for copy
-                copy_file_to_other_panel(tab_manager);
+            case 'c':
+                copy_entity_to_other_panel(tab_manager);
                 break;
-            case KEY_F(6): // F6 for move
-                move_file_to_other_panel(tab_manager);
+            case 'm':
+                move_entity_to_other_panel(tab_manager);
+                break;
+            case 'h':
+                draw_help_window(&ui);
                 break;
         }
     }
 
     free_tabs(tab_manager);
+    free_ui_windows(&ui);
     endwin();
     return 0;
 }

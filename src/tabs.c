@@ -1,9 +1,6 @@
-#include <stdlib.h>
-#include <string.h>
-#include <libgen.h>
-#include <ncurses.h>
 #include "tabs.h"
-#include "filesystem.h"
+#include "ui.h"
+
 
 TabManager* init_tabs() {
     TabManager* manager = malloc(sizeof(TabManager));
@@ -107,7 +104,7 @@ void enter_directory(TabManager* manager) {
     }
 }
 
-void delete_file_or_dir(TabManager* manager) {
+void delete_entity(TabManager* manager, UIWindows* ui) {
     Tab* tab = &manager->tabs[manager->active_tab];
     FileList* list = tab->active_panel ? tab->left_list : tab->right_list;
     char* path = tab->active_panel ? tab->left_path : tab->right_path;
@@ -118,14 +115,12 @@ void delete_file_or_dir(TabManager* manager) {
     char full_path[MAX_PATH];
     snprintf(full_path, MAX_PATH, "%s/%s", path, list->entries[cursor].name);
 
-    // Confirmation dialog
-    clear();
-    mvprintw(0, 0, "Delete %s? (y/n)", list->entries[cursor].name);
-    refresh();
-    int ch = getch();
-    if (ch != 'y' && ch != 'Y') return;
+    if (!confirm_delete(ui, list->entries[cursor].name)) {
+        draw_ui(ui, manager);
+        return;
+    }
 
-    if (remove_file_or_dir(full_path)) {
+    if (remove_entity_fs(full_path)) {
         free_file_list(list);
         if (tab->active_panel) {
             tab->left_list = get_directory_contents(path);
@@ -135,9 +130,10 @@ void delete_file_or_dir(TabManager* manager) {
             if (tab->right_cursor >= tab->right_list->count) tab->right_cursor = tab->right_list->count - 1;
         }
     }
+    draw_ui(ui, manager);
 }
 
-void rename_file_or_dir_ui(TabManager* manager) {
+void rename_entity(TabManager* manager, UIWindows* ui) {
     Tab* tab = &manager->tabs[manager->active_tab];
     FileList* list = tab->active_panel ? tab->left_list : tab->right_list;
     char* path = tab->active_panel ? tab->left_path : tab->right_path;
@@ -148,22 +144,21 @@ void rename_file_or_dir_ui(TabManager* manager) {
     char old_path[MAX_PATH];
     snprintf(old_path, MAX_PATH, "%s/%s", path, list->entries[cursor].name);
 
-    // Input new name
-    echo();
-    curs_set(1);
-    clear();
-    mvprintw(0, 0, "Enter new name for %s: ", list->entries[cursor].name);
     char new_name[MAX_NAME];
-    getstr(new_name);
-    noecho();
-    curs_set(0);
+    if (!prompt_new_name(ui, list->entries[cursor].name, new_name)) {
+        draw_ui(ui, manager);
+        return;
+    }
 
-    if (strlen(new_name) == 0) return;
+    if (strlen(new_name) == 0) {
+        draw_ui(ui, manager);
+        return;
+    }
 
     char new_path[MAX_PATH];
     snprintf(new_path, MAX_PATH, "%s/%s", path, new_name);
 
-    if (rename_file_or_dir(old_path, new_path)) {
+    if (rename_entity_fs(old_path, new_path)) {
         free_file_list(list);
         if (tab->active_panel) {
             tab->left_list = get_directory_contents(path);
@@ -173,9 +168,10 @@ void rename_file_or_dir_ui(TabManager* manager) {
             tab->right_cursor = 0;
         }
     }
+    draw_ui(ui, manager);
 }
 
-void copy_file_to_other_panel(TabManager* manager) {
+void copy_entity_to_other_panel(TabManager* manager) {
     Tab* tab = &manager->tabs[manager->active_tab];
     FileList* list = tab->active_panel ? tab->left_list : tab->right_list;
     char* src_path = tab->active_panel ? tab->left_path : tab->right_path;
@@ -189,7 +185,7 @@ void copy_file_to_other_panel(TabManager* manager) {
     snprintf(src_full_path, MAX_PATH, "%s/%s", src_path, list->entries[cursor].name);
     snprintf(dest_full_path, MAX_PATH, "%s/%s", dest_path, list->entries[cursor].name);
 
-    if (copy_file_or_dir(src_full_path, dest_full_path)) {
+    if (copy_entity_fs(src_full_path, dest_full_path)) {
         free_file_list(tab->active_panel ? tab->right_list : tab->left_list);
         if (tab->active_panel) {
             tab->right_list = get_directory_contents(tab->right_path);
@@ -199,7 +195,7 @@ void copy_file_to_other_panel(TabManager* manager) {
     }
 }
 
-void move_file_to_other_panel(TabManager* manager) {
+void move_entity_to_other_panel(TabManager* manager) {
     Tab* tab = &manager->tabs[manager->active_tab];
     FileList* list = tab->active_panel ? tab->left_list : tab->right_list;
     char* src_path = tab->active_panel ? tab->left_path : tab->right_path;
@@ -213,7 +209,7 @@ void move_file_to_other_panel(TabManager* manager) {
     snprintf(src_full_path, MAX_PATH, "%s/%s", src_path, list->entries[cursor].name);
     snprintf(dest_full_path, MAX_PATH, "%s/%s", dest_path, list->entries[cursor].name);
 
-    if (move_file_or_dir(src_full_path, dest_full_path)) {
+    if (move_entity_fs(src_full_path, dest_full_path)) {
         free_file_list(tab->active_panel ? tab->right_list : tab->left_list);
         free_file_list(list);
         if (tab->active_panel) {

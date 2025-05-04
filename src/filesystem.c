@@ -1,10 +1,5 @@
-#include <dirent.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include "filesystem.h"
-#include <stdio.h>
+
 
 FileList* get_directory_contents(const char* path) {
     FileList* list = malloc(sizeof(FileList));
@@ -48,7 +43,7 @@ void free_file_list(FileList* list) {
     free(list);
 }
 
-bool remove_file_or_dir(const char* path) {
+bool remove_entity_fs(const char* path) {
     struct stat st;
     if (stat(path, &st) != 0) return false;
 
@@ -62,7 +57,7 @@ bool remove_file_or_dir(const char* path) {
 
             char full_path[MAX_PATH];
             snprintf(full_path, MAX_PATH, "%s/%s", path, entry->d_name);
-            remove_file_or_dir(full_path);
+            remove_entity_fs(full_path);
         }
         closedir(dir);
         return rmdir(path) == 0;
@@ -71,11 +66,11 @@ bool remove_file_or_dir(const char* path) {
     }
 }
 
-bool rename_file_or_dir(const char* old_path, const char* new_path) {
+bool rename_entity_fs(const char* old_path, const char* new_path) {
     return rename(old_path, new_path) == 0;
 }
 
-bool copy_file_or_dir(const char* src_path, const char* dest_path) {
+bool copy_entity_fs(const char* src_path, const char* dest_path) {
     struct stat st;
     if (stat(src_path, &st) != 0) return false;
 
@@ -92,7 +87,7 @@ bool copy_file_or_dir(const char* src_path, const char* dest_path) {
             char dest_full[MAX_PATH];
             snprintf(src_full, MAX_PATH, "%s/%s", src_path, entry->d_name);
             snprintf(dest_full, MAX_PATH, "%s/%s", dest_path, entry->d_name);
-            copy_file_or_dir(src_full, dest_full);
+            copy_entity_fs(src_full, dest_full);
         }
         closedir(dir);
         return true;
@@ -117,13 +112,12 @@ bool copy_file_or_dir(const char* src_path, const char* dest_path) {
     }
 }
 
-bool move_file_or_dir(const char* src_path, const char* dest_path) {
+bool move_entity_fs(const char* src_path, const char* dest_path) {
     if (rename(src_path, dest_path) == 0) {
         return true;
     }
-    // If rename fails (e.g., across filesystems), copy and delete
-    if (copy_file_or_dir(src_path, dest_path)) {
-        remove_file_or_dir(src_path);
+    if (copy_entity_fs(src_path, dest_path)) {
+        remove_entity_fs(src_path);
         return true;
     }
     return false;
